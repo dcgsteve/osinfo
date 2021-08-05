@@ -1,67 +1,93 @@
-/*
-
-Checks whether average CPU load over last 5 minutes > 80%
-Checks if any partitions are > 60% used
-Checks if any partitions are > 80% used
-
-Checks if available memory is < 20%  **WE NEED TO LOOK AT THIS OVER x MINS NOT JUST ONE OFF - HOW? - DO WE KEEP LAST x RUNS LOCALLY?**
-
-*/
-
 package main
 
 import (
-	"fmt"
-
-	"github.com/shirou/gopsutil/cpu"
-	"github.com/shirou/gopsutil/disk"
 	"github.com/shirou/gopsutil/host"
 	"github.com/shirou/gopsutil/load"
 	"github.com/shirou/gopsutil/mem"
 )
 
-func main() {
-	getHostInfo()
-	getCpuInfo()
-	getCpuLoad()
-	getMemInfo()
-	getDiskInfo()
+// Tunable limits
+const CPULIMIT float64 = 0.8
+const MEMLIMIT float64 = 0.9
+
+type StatMan struct {
+	host *host.InfoStat
+	load *load.AvgStat
+	mem  *mem.VirtualMemoryStat
+	// disk *disk.PartitionStat
 }
 
-func getHostInfo() {
-	hInfo, _ := host.Info()
-	fmt.Printf("HOST INFO\n%v\n\n", hInfo)
+type KPIResults struct {
+	alertStatus bool
+	CPUPerc     int
+	MEMPerc     int
 }
 
-func getCpuLoad() {
-	info, _ := load.Avg()
-	fmt.Printf("CPU LOAD\n%v\n\n", info)
-}
-
-func getMemInfo() {
-	memInfo, _ := mem.VirtualMemory()
-	fmt.Printf("MEMORY INFO\n%v\n\n", memInfo)
-}
-
-func getDiskInfo() {
-	parts, err := disk.Partitions(true)
+func NewStatMan() (*StatMan, error) {
+	// Host info
+	host, err := host.Info()
 	if err != nil {
-		fmt.Printf("get Partitions failed, err:%v\n", err)
-		return
+		return nil, err
 	}
 
-	fmt.Printf("DISK INFO\n")
-	for _, part := range parts {
-		fmt.Printf("part:%v\n", part.String())
-	}
-}
-
-// cpu info
-func getCpuInfo() {
-	cpuInfos, err := cpu.Info()
+	// CPU load (average over 1 minute, 5 minutes, 15 minutes)
+	load, err := load.Avg()
 	if err != nil {
-		fmt.Printf("get cpu info failed, err:%v", err)
+		return nil, err
 	}
-	fmt.Printf("CORE COUNT %v\n", len(cpuInfos))
-	fmt.Printf("CPU INFO FROM CORE 1\n%v\n", cpuInfos[0])
+
+	// Memory info
+	mem, err := mem.VirtualMemory()
+	if err != nil {
+		return nil, err
+	}
+
+	// Partition info
+	// disk, err := disk.Partitions(false)
+	// if err != nil {
+	// 	return nil, err
+	// }
+
+	return &StatMan{
+		host: host,
+		load: load,
+		mem:  mem,
+	}, nil
 }
+
+func (sm *StatMan) LoadKPI() KPIResults {
+	var response KPIResults
+	response.alertStatus = false
+
+	// CPU checks - NB. order is important, don't change :)
+	if sm.load.Load5 > CPULIMIT {
+		response.CPUPerc = int(sm.load.Load5 * 100)
+		response.alertStatus = true
+	}
+	if sm.load.Load15 > CPULIMIT {
+		response.CPUPerc = int(sm.load.Load15 * 100)
+		response.alertStatus = true
+	}
+
+	// Memory checks
+	if sm.mem.UsedPercent > (MEMLIMIT * 100) {
+		response.MEMPerc = int(sm.mem.UsedPercent)
+		response.alertStatus = true
+	}
+
+	return response
+
+}
+
+// func getDiskInfo() {
+// 	parts, err := disk.Partitions(true)
+// 	if err != nil {
+// 		fmt.Printf("get Partitions failed, err:%v\n", err)
+// 		return
+// 	}
+
+// 	fmt.Printf("DISK INFO\n")
+// 	for _, part := range parts {
+// 		fmt.Printf("part:%v\n", part.String())
+// 	}
+// }
