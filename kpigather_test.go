@@ -30,5 +30,7 @@ func TestKPIGather(t *testing.T) {
 		}
 	}
 
+	SendToSyslog(results)
+
 	fmt.Println("Check complete")
 }

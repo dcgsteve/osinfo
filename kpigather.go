@@ -1,16 +1,21 @@
 package main
 
 import (
+	"fmt"
 	"github.com/shirou/gopsutil/disk"
 	"github.com/shirou/gopsutil/host"
 	"github.com/shirou/gopsutil/load"
 	"github.com/shirou/gopsutil/mem"
+	"log"
+	"log/syslog"
+	"strconv"
+	"strings"
 )
 
 // Tunable percentage limits
-const CPULIMIT = 1
-const MEMLIMIT = 1
-const DISKLIMIT = 1
+const CPULIMIT = 85
+const MEMLIMIT = 85
+const DISKLIMIT = 85
 
 // Bitmask settings
 const ALERT_CPU = 1
@@ -111,4 +116,48 @@ func (sm *KPI) LoadKPI() KPIResults {
 
 	return response
 
+}
+
+func SendToSyslog(result KPIResults) error {
+	var logFormatter []string
+	syslogger, err := syslog.Dial("", "", syslog.LOG_CRIT, "os_stat")
+	if err != nil {
+		return err
+	}
+
+	if result.CPUPercUsed >= CPULIMIT || result.MEMPercUsed >= MEMLIMIT || len(result.MountPercUsed) > 0 {
+		logFormatter = append(logFormatter, "MachineID: ", result.MachineID)
+	}
+
+	if result.CPUPercUsed >= CPULIMIT {
+		logFormatter = append(logFormatter, " CPU Usage: ", strconv.Itoa(int(result.CPUPercUsed)))
+	}
+
+	if result.MEMPercUsed >= MEMLIMIT {
+		logFormatter = append(logFormatter, " Memory: ", strconv.Itoa(int(result.MEMPercUsed)))
+	}
+
+	for _, diskInfo := range result.MountPercUsed {
+		logFormatter = append(logFormatter, " Mount Point: ", diskInfo.Name, " Mount Point Percentage used: ", strconv.Itoa(diskInfo.PercUsed))
+	}
+
+	if len(logFormatter) > 0 {
+		if _, err = fmt.Fprintf(syslogger, strings.Join(logFormatter, "")); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func main() {
+	sm, err := NewKPIGather()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	results := sm.LoadKPI()
+
+	if err = SendToSyslog(results); err != nil {
+		log.Printf("error occured suring logging to os syslog: %v", err)
+	}
 }
