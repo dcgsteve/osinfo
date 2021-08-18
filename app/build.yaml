@@ -1,0 +1,13 @@
+---
+
+env:
+  CGO_ENABLED: 0
+  GOARCH: amd64
+
+functions:
+  - name: build-linux
+    description: build stats tool for Linux
+    env:
+      GOOS: linux
+    run:
+      - go build -o ../stat/stats kpigather.go

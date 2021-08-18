@@ -1,0 +1,7 @@
+---
+
+functions:
+  - name: run-stats
+    description: statistic tool
+    run:
+      - sh stats

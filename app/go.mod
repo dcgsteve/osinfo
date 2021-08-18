@@ -1,4 +1,4 @@
-module osinfo
+module github.com/dcgsteve/osinfo/app
 
 go 1.16
 
