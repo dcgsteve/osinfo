@@ -1,10 +1,10 @@
 ---
 
 env:
-  ART_REG_URL: artisan-registry-nexus.apps.demo.openshiftdev.com
-  PKG_NAME: stats
-  ART_REG_USR: admin
-  ART_REG_PWD: Cisco2013
+  ART_REG_URL: <FILL ME>
+  PKG_NAME: <FILL ME>
+  ART_REG_USR: <FILL ME>
+  ART_REG_PWD: <FILL ME>
 
 profiles:
   - name: stat-profile
@@ -24,3 +24,4 @@ functions:
       - $(build-stat-image)
       - art build -t ${ART_REG_URL}/${PKG_NAME} -p stat-profile
       - art push -u ${ART_REG_USR}:${ART_REG_PWD} ${ART_REG_URL}/${PKG_NAME}
+      - rm -rf stat/stats

@@ -3,5 +3,7 @@
 functions:
   - name: run-stats
     description: statistic tool
+    export: true
+    runtime: ubi-min
     run:
-      - sh stats
+      - ./stats
