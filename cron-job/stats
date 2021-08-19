@@ -1,0 +1,6 @@
+#!/bin/bash
+
+#Always pulling new package
+art pull -u ${REG_USER}:${REG_PASS} ${FILL-STAT-PACKAGE-PKG}
+#Run package
+art exe artisan-registry-nexus.apps.demo.openshiftdev.com/stats run-stats -s
