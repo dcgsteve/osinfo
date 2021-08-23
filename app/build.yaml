@@ -10,4 +10,4 @@ functions:
     env:
       GOOS: linux
     run:
-      - go build -o ../stat/stats main.go
+      - go build -o ../stat/adv-stats main.go

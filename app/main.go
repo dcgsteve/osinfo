@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"github.com/dcgsteve/osinfo/app/sensors"
 	"log"
 )
@@ -18,9 +17,7 @@ func main() {
 
 	results := sm.LoadKPI()
 
-	if err = sensors.SendToSyslog(results); err != nil {
+	if err = sensors.SendToSyslog(results, sensorTemperature); err != nil {
 		log.Printf("error occured suring logging to os syslog: %v", err)
 	}
-
-	fmt.Println(sensorTemperature)
 }

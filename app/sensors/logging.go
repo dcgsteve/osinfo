@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-func SendToSyslog(result KPIResults) error {
+func SendToSyslog(result KPIResults, tempResult *HardwareSensors) error {
 	var logFormatter []string
 	syslogger, err := syslog.Dial("", "", syslog.LOG_CRIT, "os_stat")
 	if err != nil {
@@ -29,11 +29,26 @@ func SendToSyslog(result KPIResults) error {
 	for _, diskInfo := range result.MountPercUsed {
 		logFormatter = append(logFormatter, " Mount Point: ", diskInfo.Name, " Mount Point Percentage used: ", strconv.Itoa(diskInfo.PercUsed))
 	}
+	if len(tempResult.Chips) > 0 {
+		for chip := range tempResult.Chips {
+			for k, v := range tempResult.Chips[chip] {
+				if strings.Contains(k, "Core") {
+					//currentTemp, _, criticalTreshold := TemperatureToFloat(v)
+					currentTemp, _, _ := TemperatureToFloat(v)
+					if currentTemp >= 10 {
+						temp := fmt.Sprintf("%v", currentTemp)
+						logFormatter = append(logFormatter, " ", k, ": ", temp)
+					}
+				}
+			}
+		}
+	}
 
 	if len(logFormatter) > 0 {
 		if _, err = fmt.Fprintf(syslogger, strings.Join(logFormatter, "")); err != nil {
 			return err
 		}
 	}
+
 	return nil
 }
